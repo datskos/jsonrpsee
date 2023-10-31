@@ -427,6 +427,11 @@ impl<Context> RpcModule<Context> {
 		Self { ctx: Arc::new(ctx), methods: Default::default() }
 	}
 
+	/// Create a new module with a given shared `Context` that is already Arc.
+	pub fn new_raw(ctx: Arc<Context>) -> Self {
+		Self { ctx, methods: Default::default() }
+	}
+
 	/// Transform a module into an `RpcModule<()>` (unit context).
 	pub fn remove_context(self) -> RpcModule<()> {
 		let mut module = RpcModule::new(());
