@@ -73,6 +73,7 @@ pub(crate) struct CallData<'a, L: Logger> {
 	pub(crate) sink: &'a MethodSink,
 	pub(crate) logger: &'a L,
 	pub(crate) request_start: L::Instant,
+	pub(crate) path: Option<String>,
 }
 
 // Batch responses must be sent back as a single message so we read the results from each
@@ -167,6 +168,7 @@ pub(crate) async fn execute_call<'a, L: Logger>(req: Request<'a>, call: CallData
 		logger,
 		request_start,
 		bounded_subscriptions,
+		path,
 	} = call;
 
 	rx_log_from_json(&req, call.max_log_length);
@@ -199,7 +201,7 @@ pub(crate) async fn execute_call<'a, L: Logger>(req: Request<'a>, call: CallData
 				logger.on_call(name, params.clone(), logger::MethodKind::Subscription, TransportProtocol::WebSocket);
 
 				if let Some(p) = bounded_subscriptions.acquire() {
-					let conn_state = SubscriptionState { conn_id, id_provider, subscription_permit: p };
+					let conn_state = SubscriptionState { conn_id, id_provider, subscription_permit: p, path };
 					match callback(id, params, sink.clone(), conn_state).await {
 						Ok(r) => CallOrSubscription::Subscription(r),
 						Err(id) => {
@@ -246,6 +248,7 @@ pub(crate) async fn background_task<L: Logger>(sender: Sender, receiver: Receive
 		remote_addr,
 		message_buffer_capacity,
 		conn,
+		path,
 		..
 	} = svc;
 
@@ -274,6 +277,7 @@ pub(crate) async fn background_task<L: Logger>(sender: Sender, receiver: Receive
 		id_provider,
 		logger: logger.clone(),
 		bounded_subscriptions,
+		path,
 	});
 
 	tokio::pin!(stopped);
@@ -475,6 +479,7 @@ struct ExecuteCallParams<L: Logger> {
 	sink: MethodSink,
 	logger: L,
 	bounded_subscriptions: BoundedSubscriptions,
+	path: Option<String>,
 }
 
 async fn execute_unchecked_call<L: Logger>(
@@ -495,6 +500,7 @@ async fn execute_unchecked_call<L: Logger>(
 		id_provider: &*params.id_provider,
 		logger: &params.logger,
 		request_start,
+		path: params.path.clone(),
 	};
 
 	match first_non_whitespace {

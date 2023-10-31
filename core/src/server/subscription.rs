@@ -490,6 +490,8 @@ pub struct SubscriptionState<'a> {
 	pub id_provider: &'a dyn IdProvider,
 	/// Subscription limit
 	pub subscription_permit: SubscriptionPermit,
+	/// Request path
+	pub path: Option<String>,
 }
 
 pub(crate) fn sub_message_to_json(

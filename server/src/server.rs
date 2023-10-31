@@ -646,6 +646,8 @@ pub(crate) struct ServiceData<L: Logger> {
 	pub(crate) enable_ws: bool,
 	/// Number of messages that server is allowed `buffer` until backpressure kicks in.
 	pub(crate) message_buffer_capacity: u32,
+	/// Request path
+	pub(crate) path: Option<String>,
 }
 
 /// JsonRPSee service compatible with `tower`.
@@ -682,6 +684,7 @@ impl<L: Logger> hyper::service::Service<hyper::Request<hyper::Body>> for TowerSe
 			let response = match server.receive_request(&request) {
 				Ok(response) => {
 					self.inner.logger.on_connect(self.inner.remote_addr, &request, TransportProtocol::WebSocket);
+					self.inner.path = Some(request.uri().path().to_string());
 					let data = self.inner.clone();
 
 					tokio::spawn(
@@ -831,6 +834,7 @@ fn process_connection<'a, L: Logger, B, U>(
 			enable_http: cfg.enable_http,
 			enable_ws: cfg.enable_ws,
 			message_buffer_capacity: cfg.message_buffer_capacity,
+			path: None,
 		},
 	};
 

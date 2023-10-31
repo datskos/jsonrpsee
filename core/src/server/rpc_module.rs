@@ -315,7 +315,7 @@ impl Methods {
 			Some(MethodCallback::Async(cb)) => (cb)(id.into_owned(), params.into_owned(), 0, usize::MAX).await,
 			Some(MethodCallback::Subscription(cb)) => {
 				let conn_state =
-					SubscriptionState { conn_id: 0, id_provider: &RandomIntegerIdProvider, subscription_permit };
+					SubscriptionState { conn_id: 0, id_provider: &RandomIntegerIdProvider, subscription_permit, path: None };
 				let res = match (cb)(id, params, MethodSink::new(tx.clone()), conn_state).await {
 					Ok(rp) => rp,
 					Err(id) => MethodResponse::error(id, ErrorObject::from(ErrorCode::InternalError)),
@@ -631,7 +631,7 @@ impl<Context: Send + Sync + 'static> RpcModule<Context> {
 	) -> Result<&mut MethodCallback, Error>
 	where
 		Context: Send + Sync + 'static,
-		F: (Fn(Params<'static>, PendingSubscriptionSink, Arc<Context>) -> Fut) + Send + Sync + Clone + 'static,
+		F: (Fn(Params<'static>, PendingSubscriptionSink, Arc<Context>, Option<String>) -> Fut) + Send + Sync + Clone + 'static,
 		Fut: Future<Output = R> + Send + 'static,
 		R: IntoSubscriptionCloseResponse + Send,
 	{
@@ -666,7 +666,7 @@ impl<Context: Send + Sync + 'static> RpcModule<Context> {
 					// definition and not the as same when the subscription call has been completed.
 					//
 					// This runs until the subscription callback has completed.
-					let sub_fut = callback(params.into_owned(), sink, ctx.clone());
+					let sub_fut = callback(params.into_owned(), sink, ctx.clone(), conn.path);
 
 					tokio::spawn(async move {
 						// This will wait for the subscription future to be resolved
